@@ -1,0 +1,17 @@
+{
+  "name": "FundedOut",
+  "short_name": "FundedOut",
+  "description": "Fully funded scholarships. No IELTS required.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#07111d",
+  "theme_color": "#3b82f6",
+  "icons": [
+    {
+      "src": "/logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}
