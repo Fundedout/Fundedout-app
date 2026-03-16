@@ -2,22 +2,20 @@ import { useState, useMemo } from "react";
 
 const STORAGE_KEY = "scholarship_tracker_v1";
 function loadFromStorage() {
-  try { const s = localStorage.getItem(STORAGE_KEY); return s ? JSON.parse(s) : {}; }
-  catch { return {}; }
+  try { const s = localStorage.getItem(STORAGE_KEY); return s ? JSON.parse(s) : {}; } catch { return {}; }
 }
 function saveToStorage(data) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
 }
 
 const DOC_CATEGORIES = {
-  "Academic":   ["Transcripts", "Diploma", "Certificates", "Study Plan", "Research Plan", "Research Proposal", "Thesis", "Dissertation"],
-  "Identity":   ["Passport", "Birth Certificate", "Photos", "Photo", "ID"],
-  "Motivation": ["Motivation Letter", "Statement of Purpose", "Personal Statement", "CV", "Résumé", "Resume"],
-  "References": ["Recommendation Letter", "Recommendation"],
+  "Academic":       ["Transcripts", "Diploma", "Certificates", "Study Plan", "Research Plan", "Research Proposal", "Thesis", "Dissertation"],
+  "Identity":       ["Passport", "Birth Certificate", "Photos", "Photo", "ID"],
+  "Motivation":     ["Motivation Letter", "Statement of Purpose", "Personal Statement", "CV", "Résumé", "Resume"],
+  "References":     ["Recommendation Letter", "Recommendation"],
   "Health & Legal": ["Medical", "HIV", "Police Clearance", "Non-Criminal", "Hepatitis"],
   "Official Forms": ["Application Form", "Nomination Form", "NOC", "Proficiency", "IELTS", "TOEFL", "Admission Letter"],
 };
-
 function getDocCategory(doc) {
   const d = doc.toLowerCase();
   for (const [cat, keys] of Object.entries(DOC_CATEGORIES)) {
@@ -25,12 +23,10 @@ function getDocCategory(doc) {
   }
   return "Other";
 }
-
 function calcRadarData(docs, completedDocs) {
-  const cats = Object.keys(DOC_CATEGORIES);
-  return cats.map(cat => {
+  return Object.keys(DOC_CATEGORIES).map(cat => {
     const catDocs = docs.filter(d => getDocCategory(d) === cat);
-    if (catDocs.length === 0) return { cat, score: 100, total: 0, done: 0 };
+    if (!catDocs.length) return { cat, score: 100, total: 0, done: 0 };
     const done = catDocs.filter(d => completedDocs.includes(d)).length;
     return { cat, score: Math.round((done / catDocs.length) * 100), total: catDocs.length, done };
   });
@@ -38,9 +34,8 @@ function calcRadarData(docs, completedDocs) {
 
 function RadarChart({ docs, completedDocs, size = 160 }) {
   const data = calcRadarData(docs, completedDocs).filter(d => d.total > 0);
-  if (data.length === 0) return null;
-  const cx = size / 2, cy = size / 2, r = size * 0.36;
-  const n = data.length;
+  if (!data.length) return null;
+  const cx = size / 2, cy = size / 2, r = size * 0.36, n = data.length;
   const angle = i => (i * 2 * Math.PI) / n - Math.PI / 2;
   const pt = (i, radius) => ({ x: cx + radius * Math.cos(angle(i)), y: cy + radius * Math.sin(angle(i)) });
   const toPath = pts => pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ") + " Z";
@@ -49,16 +44,11 @@ function RadarChart({ docs, completedDocs, size = 160 }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
       <svg width={size} height={size} style={{ overflow: "visible" }}>
-        {[0.25, 0.5, 0.75, 1].map(lv => (
-          <polygon key={lv} points={data.map((_, i) => { const p = pt(i, r * lv); return `${p.x},${p.y}`; }).join(" ")} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
-        ))}
+        {[0.25, 0.5, 0.75, 1].map(lv => <polygon key={lv} points={data.map((_, i) => { const p = pt(i, r * lv); return `${p.x},${p.y}`; }).join(" ")} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="1" />)}
         {data.map((_, i) => { const o = pt(i, r); return <line key={i} x1={cx} y1={cy} x2={o.x} y2={o.y} stroke="rgba(255,255,255,0.07)" strokeWidth="1" />; })}
         <path d={toPath(scorePts)} fill="rgba(59,130,246,0.2)" stroke="#3b82f6" strokeWidth="1.5" />
         {scorePts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="3" fill={data[i].score === 100 ? "#00d278" : "#3b82f6"} />)}
-        {data.map((d, i) => {
-          const p = pt(i, r + 18);
-          return <text key={i} x={p.x} y={p.y} textAnchor="middle" dominantBaseline="middle" fill={d.score === 100 ? "#00d278" : d.score === 0 ? "#f87171" : "#94a3b8"} fontSize="7.5" fontFamily="Outfit,sans-serif" fontWeight="600">{d.cat.split(" ")[0]}</text>;
-        })}
+        {data.map((d, i) => { const p = pt(i, r + 18); return <text key={i} x={p.x} y={p.y} textAnchor="middle" dominantBaseline="middle" fill={d.score === 100 ? "#00d278" : d.score === 0 ? "#f87171" : "#94a3b8"} fontSize="7.5" fontFamily="Outfit,sans-serif" fontWeight="600">{d.cat.split(" ")[0]}</text>; })}
         <text x={cx} y={cy - 6} textAnchor="middle" fill="#f1f5f9" fontSize="16" fontWeight="800" fontFamily="Syne,sans-serif">{overall}%</text>
         <text x={cx} y={cy + 10} textAnchor="middle" fill="#475569" fontSize="7" fontFamily="Outfit,sans-serif" letterSpacing="0.05em">READY</text>
       </svg>
@@ -80,7 +70,7 @@ function ReadinessScore({ docs, completedDocs }) {
   const label = pct === 100 ? "Ready to Apply!" : pct >= 60 ? "Almost There" : pct >= 30 ? "In Progress" : "Just Started";
   const missing = docs.filter(d => !completedDocs.includes(d));
   return (
-    <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "16px", marginBottom: 18 }}>
+    <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: 16, marginBottom: 18 }}>
       <div style={{ fontSize: 10, color: "#475569", letterSpacing: "0.08em", marginBottom: 12 }}>APPLICATION READINESS</div>
       <div style={{ display: "flex", gap: 20, alignItems: "center", flexWrap: "wrap" }}>
         <RadarChart docs={docs} completedDocs={completedDocs} size={170} />
@@ -91,11 +81,7 @@ function ReadinessScore({ docs, completedDocs }) {
             <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 4, transition: "width 0.4s ease" }} />
           </div>
           <div style={{ fontSize: 11, color: "#475569", marginTop: 8 }}>{completedDocs.length} of {docs.length} documents ready</div>
-          {missing.length > 0 && (
-            <div style={{ marginTop: 10, fontSize: 11, color: "#64748b", lineHeight: 1.6 }}>
-              Missing: {missing.slice(0, 2).join(", ")}{missing.length > 2 ? ` +${missing.length - 2} more` : ""}
-            </div>
-          )}
+          {missing.length > 0 && <div style={{ marginTop: 10, fontSize: 11, color: "#64748b", lineHeight: 1.6 }}>Missing: {missing.slice(0, 2).join(", ")}{missing.length > 2 ? ` +${missing.length - 2} more` : ""}</div>}
         </div>
       </div>
     </div>
@@ -104,23 +90,17 @@ function ReadinessScore({ docs, completedDocs }) {
 
 function TimelineView({ scholarships, trackingData, onOpen }) {
   const sorted = [...scholarships].sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
-  const now = new Date();
-  const first = new Date(sorted[0]?.deadline);
-  const last  = new Date(sorted[sorted.length - 1]?.deadline);
+  const now = new Date(), first = new Date(sorted[0]?.deadline), last = new Date(sorted[sorted.length - 1]?.deadline);
   const totalMs = Math.max(last - first, 1);
   const getPos = d => Math.max(0, Math.min(100, ((new Date(d) - first) / totalMs) * 100));
   const todayPos = Math.max(0, Math.min(100, ((now - first) / totalMs) * 100));
   const urgentCount = scholarships.filter(s => { const d = getDaysLeft(s.deadline); return d > 0 && d <= 7; }).length;
-
   return (
     <div>
       {urgentCount > 0 && (
         <div style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", borderRadius: 12, padding: "12px 16px", marginBottom: 20, display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontSize: 18 }}>⚠️</span>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "#f87171" }}>{urgentCount} scholarship{urgentCount > 1 ? "s" : ""} closing within 7 days</div>
-            <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>Act immediately</div>
-          </div>
+          <div><div style={{ fontSize: 13, fontWeight: 700, color: "#f87171" }}>{urgentCount} scholarship{urgentCount > 1 ? "s" : ""} closing within 7 days</div><div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>Act immediately</div></div>
         </div>
       )}
       <div style={{ marginBottom: 28, padding: "0 8px" }}>
@@ -136,10 +116,7 @@ function TimelineView({ scholarships, trackingData, onOpen }) {
             </div>
           )}
           {sorted.map(s => {
-            const days = getDaysLeft(s.deadline);
-            const isPast = days < 0;
-            const isUrgent = days >= 0 && days <= 7;
-            const isSoon = days >= 0 && days <= 45;
+            const days = getDaysLeft(s.deadline), isPast = days < 0, isUrgent = days >= 0 && days <= 7, isSoon = days >= 0 && days <= 45;
             const dotColor = isPast ? "#334155" : isUrgent ? "#f87171" : isSoon ? "#fbbf24" : "#3b82f6";
             const isTracked = trackingData[s.id]?.status && trackingData[s.id].status !== "none";
             return (
@@ -154,14 +131,9 @@ function TimelineView({ scholarships, trackingData, onOpen }) {
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {sorted.map(s => {
-          const days = getDaysLeft(s.deadline);
-          const isPast = days < 0;
-          const isUrgent = days >= 0 && days <= 7;
-          const isSoon = days >= 0 && days <= 45;
+          const days = getDaysLeft(s.deadline), isPast = days < 0, isUrgent = days >= 0 && days <= 7, isSoon = days >= 0 && days <= 45;
           const barColor = isPast ? "#334155" : isUrgent ? "#f87171" : isSoon ? "#fbbf24" : "#3b82f6";
-          const t = trackingData[s.id];
-          const isTracked = t?.status && t.status !== "none";
-          const status = STATUS_CONFIG[t?.status || "none"];
+          const t = trackingData[s.id], isTracked = t?.status && t.status !== "none", status = STATUS_CONFIG[t?.status || "none"];
           return (
             <div key={s.id} onClick={() => onOpen(s)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, cursor: "pointer", transition: "background 0.15s", opacity: isPast ? 0.4 : 1 }}
               onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.055)"}
@@ -189,260 +161,26 @@ function TimelineView({ scholarships, trackingData, onOpen }) {
   );
 }
 
-// ── 18 VERIFIED SCHOLARSHIPS ──────────────────────────────────────────────────
 const SCHOLARSHIPS = [
-  {
-    id: 1,
-    name: "Türkiye Bursları",
-    country: "Turkey", flag: "🇹🇷", region: "Europe",
-    levels: ["Bachelor's", "Master's", "PhD"],
-    ielts: false, funded: true,
-    amount: "Full tuition + accommodation + health insurance + monthly stipend",
-    deadline: "2026-02-20",
-    fields: ["All Fields"],
-    description: "One of the most generous scholarships globally. Covers tuition, accommodation, health insurance, and monthly stipend. Open to all nationalities. Includes a free Turkish language course.",
-    link: "https://turkiyeburslari.gov.tr",
-    difficulty: "Competitive",
-    docs: ["Valid Passport / ID Copy", "Recent Passport-Sized Photo", "Academic Transcripts", "Diplomas / Graduation Certificates", "Statement of Purpose", "Recommendation Letter x2"],
-  },
-  {
-    id: 2,
-    name: "Stipendium Hungaricum",
-    country: "Hungary", flag: "🇭🇺", region: "Europe",
-    levels: ["Bachelor's", "Master's", "PhD"],
-    ielts: false, funded: true,
-    amount: "Full tuition + monthly allowance + accommodation",
-    deadline: "2026-01-15",
-    fields: ["All Fields"],
-    description: "Hungary's flagship scholarship. No separate IELTS required — proof of language proficiency accepted. Apply through your home country's Tempus Public Foundation office. Documents must be in English or Hungarian.",
-    link: "https://stipendiumhungaricum.hu",
-    difficulty: "Moderate",
-    docs: ["Completed Online Application Form", "Motivation Letter", "Proof of Language Proficiency", "Academic Transcripts", "Graduation Certificates", "Medical Certificate", "Passport Copy"],
-  },
-  {
-    id: 3,
-    name: "Chinese Government Scholarship (CSC)",
-    country: "China", flag: "🇨🇳", region: "Asia",
-    levels: ["Bachelor's", "Master's", "PhD"],
-    ielts: false, funded: true,
-    amount: "Full tuition + free accommodation + monthly stipend (2,500–3,500 CNY)",
-    deadline: "2026-03-15",
-    fields: ["All Fields"],
-    description: "China's largest scholarship with thousands of seats. Deadlines range Dec 2025–April 2026 depending on track. Apply via CSC system or nearest Chinese embassy. Early application strongly recommended.",
-    link: "https://www.campuschina.org",
-    difficulty: "Moderate",
-    docs: ["Notarized Highest Diploma", "Academic Transcripts", "Detailed Study Plan (800+ words for postgrad)", "Recommendation Letter x2 (postgrad)", "Foreigner Physical Examination Form", "Non-Criminal Record Report", "Valid Passport Copy", "English / Chinese Proficiency Proof", "Pre-Admission Letter (if applicable)"],
-  },
-  {
-    id: 4,
-    name: "Romanian Government Scholarship",
-    country: "Romania", flag: "🇷🇴", region: "Europe",
-    levels: ["Bachelor's", "Master's", "PhD"],
-    ielts: false, funded: true,
-    amount: "Full tuition + accommodation + monthly stipend (65 EUR)",
-    deadline: "2026-03-31",
-    fields: ["All Fields"],
-    description: "Fully funded in Eastern Europe. No IELTS or TOEFL required. All documents must be authorized translations in Romanian, English, French, or Spanish. Submit via the Study in Romania portal.",
-    link: "https://www.roaid.ro",
-    difficulty: "Moderate",
-    docs: ["Academic Transcripts", "Diplomas / Baccalaureate Certificate", "Birth Certificate", "Passport (first 3 pages)", "CV"],
-  },
-  {
-    id: 5,
-    name: "Russian Government Scholarship",
-    country: "Russia", flag: "🇷🇺", region: "Europe",
-    levels: ["Bachelor's", "Master's", "PhD"],
-    ielts: false, funded: true,
-    amount: "Full tuition + dormitory + monthly stipend",
-    deadline: "2026-01-15",
-    fields: ["Engineering", "Medicine", "Sciences", "Arts"],
-    description: "Large annual quota for developing countries. Register on the official Education in Russia portal. All documents must be notarized and translated into Russian. Apply early — January 15 deadline.",
-    link: "https://education-in-russia.com",
-    difficulty: "Low-Moderate",
-    docs: ["Valid Passport (18+ months validity beyond arrival)", "Academic Certificates / Transcripts (HSSC / Bachelor's)", "Medical Health Certificate", "HIV-Negative Certificate", "Completed Application Form", "Notarized Russian-Translated Document Portfolio"],
-  },
-  {
-    id: 6,
-    name: "Azerbaijan Government Scholarship",
-    country: "Azerbaijan", flag: "🇦🇿", region: "Asia",
-    levels: ["Bachelor's", "Master's", "PhD"],
-    ielts: false, funded: true,
-    amount: "Tuition + accommodation + monthly stipend",
-    deadline: "2026-04-15",
-    fields: ["All Fields"],
-    description: "Full funding in Azerbaijan. Minimum 70% GPA required. Documents in English, Russian, or Turkish. No IELTS needed if your previous education was in English — submit an MOI certificate instead. Apply via Azerbaijan government scholarship portal.",
-    link: "https://scholarship.study.gov.az",
-    difficulty: "Low-Moderate",
-    docs: ["Completed Nomination Form", "Certified Academic Diplomas / Transcripts (min 70% GPA)", "Valid Passport Copy", "Medical Certificate (incl. HIV, Hepatitis B/C)", "CV / Résumé", "Motivation Letter", "MOI Certificate (if prev. education in English) OR IELTS / TOEFL"],
-  },
-  {
-    id: 7,
-    name: "Malaysian International Scholarship (MIS)",
-    country: "Malaysia", flag: "🇲🇾", region: "Asia",
-    levels: ["Master's", "PhD"],
-    ielts: false, funded: true,
-    amount: "Full tuition + monthly allowance (RM 1,500–2,000) + return airfare",
-    deadline: "2026-04-03",
-    fields: ["STEM", "Economics", "Social Sciences"],
-    description: "Malaysia's flagship postgraduate scholarship. Application period: 4 March – 3 April 2026. No IELTS needed if your previous degree was taught in English — submit an MOI certificate. Apply via the official KPT MIS Online Application System. All documents in PDF format.",
-    link: "https://biasiswa.mohe.gov.my",
-    difficulty: "Moderate",
-    docs: ["Certified Passport Copy (6+ months validity)", "Academic Transcripts", "MOI Certificate (if prev. degree in English) OR IELTS / TOEFL", "Recommendation Letter x2", "CV", "Research Proposal (for research-based programs)", "Admission Letter from Malaysian University"],
-  },
-  {
-    id: 8,
-    name: "Indonesian KNB Scholarship",
-    country: "Indonesia", flag: "🇮🇩", region: "Asia",
-    levels: ["Master's", "PhD"],
-    ielts: false, funded: true,
-    amount: "Full tuition + monthly living allowance",
-    deadline: "2026-03-31",
-    fields: ["All Fields"],
-    description: "Indonesian government scholarship. No IELTS needed if previous education was in English — submit MOI certificate. Unique requirement: record a 5-minute motivation video in English or Bahasa Indonesia, upload to YouTube, and submit the link. Apply via Indonesian Embassy.",
-    link: "https://beasiswadosen.kemdikbud.go.id",
-    difficulty: "Low-Moderate",
-    docs: ["Recommendation Letter from Indonesian Embassy", "Valid Passport Copy (or Birth Certificate)", "Academic Certificates / Transcripts (in English)", "MOI Certificate (if prev. education in English) OR TOEFL / IELTS", "CV", "Medical Report", "5-Minute Motivation Video (uploaded to YouTube — link required)", "Recommendation from Employer / Supervisor", "Statement of Purpose (PhD)", "Potential Supervisor's Letter (PhD)"],
-  },
-  {
-    id: 9,
-    name: "Korean Government Scholarship (KGSP)",
-    country: "South Korea", flag: "🇰🇷", region: "Asia",
-    levels: ["Bachelor's", "Master's", "PhD"],
-    ielts: false, funded: true,
-    amount: "Full tuition + monthly stipend (900,000 KRW) + Korean language training + airfare",
-    deadline: "2026-03-31",
-    fields: ["All Fields"],
-    description: "NIIED's flagship program. Undergrad: Sep 15–30 2025. Graduate: Feb 12 – late March 2026. Includes free 1-year Korean language course. Transcripts and graduation certificates must be apostilled or consular confirmed. Apply via Korean Embassy.",
-    link: "https://www.niied.go.kr/user/erdietlsDetailView.do",
-    difficulty: "Competitive",
-    docs: ["Completed GKS Application Form", "Personal Statement", "Study Plan", "Research Proposal (graduate)", "Recommendation Letter x2", "Personal Medical Assessment Form", "Proof of Citizenship (applicant + parents)", "Apostilled Academic Transcripts", "Apostilled Graduation Certificates"],
-  },
-  {
-    id: 10,
-    name: "Japanese MEXT Scholarship",
-    country: "Japan", flag: "🇯🇵", region: "Asia",
-    levels: ["Bachelor's", "Master's", "PhD"],
-    ielts: false, funded: true,
-    amount: "Full tuition + monthly stipend (117,000–145,000 JPY) + airfare",
-    deadline: "2026-06-01",
-    fields: ["All Fields"],
-    description: "Japan's Ministry of Education flagship scholarship. Embassy recommendation track: contact Japanese Embassy in Islamabad by April–June 2026 for next cycle. University recommendation: contact target universities directly. All documents A4 size, in English or Japanese.",
-    link: "https://www.studyinjapan.go.jp/en/smap_stopj-applications_research.html",
-    difficulty: "Very Competitive",
-    docs: ["Completed MEXT Application Form", "Research Plan / Study Plan", "Academic Transcripts", "Graduation Certificates", "Recommendation Letter x2", "Medical Certificate", "Passport Copy"],
-  },
-  {
-    id: 11,
-    name: "Saudi Arabia Scholarship (MoHE)",
-    country: "Saudi Arabia", flag: "🇸🇦", region: "Middle East",
-    levels: ["Bachelor's", "Master's", "PhD"],
-    ielts: false, funded: true,
-    amount: "Full tuition + accommodation + monthly stipend + medical insurance + airfare",
-    deadline: "2026-10-31",
-    fields: ["All Fields"],
-    description: "Study at Saudi Arabia's top universities. 2025–26 cycle has closed. Next cycle (2026–27) expected: June 2026 for undergrad, October 2026 for postgrad. Apply via the Saudi Cultural Bureau in your country. All academic docs translated to Arabic.",
-    link: "https://he.moe.gov.sa/ar/StudyInSaudi/Pages/default.aspx",
-    difficulty: "Moderate",
-    docs: ["Valid Passport Copy", "Academic Transcripts / Certificates (translated to Arabic)", "Recent Medical Report (under 6 months)", "Police Character Certificate", "CV", "Recommendation Letter x2", "NOC from Government (if applicable)"],
-  },
-  {
-    id: 12,
-    name: "Qatar University Scholarship",
-    country: "Qatar", flag: "🇶🇦", region: "Middle East",
-    levels: ["Master's", "PhD"],
-    ielts: false, funded: true,
-    amount: "Full tuition + accommodation + textbooks + round-trip airfare",
-    deadline: "2026-02-25",
-    fields: ["Engineering", "Business", "Sciences", "Humanities"],
-    description: "Qatar University fully funded scholarship for Fall 2026 postgraduate programs (Master's, PhD, PharmD). Deadline: February 25, 2026. Undergraduate scholarships have earlier deadlines — check QU portal directly.",
-    link: "https://www.qu.edu.qa/offices/international/international-students/scholarships",
-    difficulty: "Moderate",
-    docs: ["Final Official Academic Transcripts", "Completed QU Application Form", "Valid Passport Copy", "Passport-Sized Photos", "Recommendation Letters", "CV", "English Proficiency Proof (program-dependent)"],
-  },
-  {
-    id: 13,
-    name: "Brunei Darussalam Government Scholarship (BDGS)",
-    country: "Brunei", flag: "🇧🇳", region: "Asia",
-    levels: ["Bachelor's", "Master's", "PhD"],
-    ielts: false, funded: true,
-    amount: "Full tuition + accommodation + monthly allowance + return airfare + medical",
-    deadline: "2026-02-15",
-    fields: ["All Fields"],
-    description: "Brunei's flagship government scholarship for 2026/2027 academic session. English-medium country, no IELTS required, very low competition. Deadline: February 15, 2026. Apply via the Ministry of Foreign Affairs Brunei online portal.",
-    link: "https://www.mfa.gov.bn/Pages/Scholarships.aspx",
-    difficulty: "Low",
-    docs: ["Completed Online Application Form", "Certified Academic Transcripts / Certificates", "Birth Certificate", "Passport Copy", "Passport-Sized Photos"],
-  },
-  {
-    id: 14,
-    name: "Taiwan ICDF Scholarship",
-    country: "Taiwan", flag: "🇹🇼", region: "Asia",
-    levels: ["Master's", "PhD"],
-    ielts: false, funded: true,
-    amount: "Full tuition + accommodation + monthly stipend (NT$18,000–20,000) + airfare + insurance",
-    deadline: "2026-03-15",
-    fields: ["Agriculture", "Public Health", "Engineering", "Business"],
-    description: "Taiwan's official development scholarship. ~25% acceptance rate — competitive but achievable. Must possess a bachelor's degree and meet university admission requirements. No IELTS required. Apply via Taiwan ICDF portal.",
-    link: "https://www.icdf.org.tw/ctlr?PRO=icdf.scholar.ScholarIndex",
-    difficulty: "Moderate",
-    docs: ["Bachelor's Degree Certificate", "Academic Transcripts", "Study Plan", "Passport Copy", "Recommendation Letter x2", "Medical Certificate"],
-  },
-  {
-    id: 15,
-    name: "Belarus Government Scholarship",
-    country: "Belarus", flag: "🇧🇾", region: "Europe",
-    levels: ["Bachelor's", "Master's", "PhD"],
-    ielts: false, funded: true,
-    amount: "Full tuition + dormitory",
-    deadline: "2026-09-01",
-    fields: ["Engineering", "Medicine", "Sciences"],
-    description: "Full tuition waiver in Belarus. Applications typically open early summer for September intake. Begin process by June 2026. All documents must be translated into Russian or Belarusian. Apply via Belarusian embassy.",
-    link: "https://edu.gov.by/en/higher-education/education-of-foreign-citizens",
-    difficulty: "Low",
-    docs: ["Completed Application Form", "Legalized / Notarized Academic Transcripts", "Birth Certificate", "Medical Certificate (incl. HIV/AIDS test)", "Valid Passport (18+ months validity)", "Passport-Sized Photos", "Motivation Letter"],
-  },
-  {
-    id: 16,
-    name: "Serbia 'World in Serbia' Scholarship",
-    country: "Serbia", flag: "🇷🇸", region: "Europe",
-    levels: ["Bachelor's", "Master's", "PhD"],
-    ielts: false, funded: true,
-    amount: "Free tuition + accommodation + meals + monthly stipend (18,000 RSD) + health insurance",
-    deadline: "2026-05-25",
-    fields: ["All Fields"],
-    description: "Serbia's government scholarship for Non-Aligned Movement countries — India and Pakistan are both eligible. Includes Serbian language prep course. Submit to Serbian diplomatic mission. Deadline: May 25, 2026.",
-    link: "https://welcometoserbia.gov.rs/scholarships",
-    difficulty: "Low",
-    docs: ["Completed Application Form", "CV", "Passport Copy", "Academic Transcripts / Diplomas", "Proof of Serbian or English Proficiency", "Medical Certificate (not older than 6 months)"],
-  },
-  {
-    id: 17,
-    name: "Morocco Government Scholarship (AMCI)",
-    country: "Morocco", flag: "🇲🇦", region: "Africa",
-    levels: ["Bachelor's", "Master's", "PhD"],
-    ielts: false, funded: true,
-    amount: "Tuition + accommodation + monthly stipend",
-    deadline: "2026-06-12",
-    fields: ["Engineering", "Medicine", "Agriculture"],
-    description: "Moroccan Agency for International Cooperation scholarship. Application period: April–June 2026. Pakistani applicants apply via HEC Pakistan (2025 HEC deadline was June 12). All application documents typically in French.",
-    link: "https://www.amci.ma",
-    difficulty: "Low-Moderate",
-    docs: ["Completed AMCI Application Form (in French)", "HEC Pakistan Application Form (printed)", "Academic Transcripts / Certificates (attested)", "Birth Certificate / National ID Copy", "Passport Bio-data Page", "Medical Certificate (under 3 months, from public health dept)", "Police Clearance Certificate (under 6 months)", "Motivation Letter", "Recommendation Letter x2", "Passport-Sized Photos (2–6)", "PhD Dissertation + Thesis Project (PhD only)", "NOC from Employer (if employed)"],
-  },
-  {
-    id: 18,
-    name: "Kyrgyzstan Government Scholarship",
-    country: "Kyrgyzstan", flag: "🇰🇬", region: "Asia",
-    levels: ["Bachelor's", "Master's"],
-    ielts: false, funded: true,
-    amount: "Tuition + dormitory",
-    deadline: "2026-06-01",
-    fields: ["Medicine", "Engineering", "Law"],
-    description: "Accessible Central Asian scholarship. Deadlines vary — verify on official Ministry of Education website or specific university portals. Russian-medium programs available. Proficiency test may be administered by university directly.",
-    link: "https://edu.gov.kg/en/scholarship",
-    difficulty: "Low",
-    docs: ["Completed Application Form", "Academic Transcripts (translated to Russian or Kyrgyz)", "Medical Certificate with Lab Reports", "Valid Passport Copy", "CV", "English or Russian Proficiency Test Scores", "Motivation Letter", "Research Proposal (PhD only)"],
-  },
+  { id: 1, name: "Türkiye Bursları", country: "Turkey", flag: "🇹🇷", region: "Europe", levels: ["Bachelor's", "Master's", "PhD"], ielts: false, funded: true, amount: "Full tuition + accommodation + health insurance + monthly stipend", deadline: "2026-02-20", fields: ["All Fields"], description: "One of the most generous scholarships globally. Covers tuition, accommodation, health insurance, and monthly stipend. Open to all nationalities. Includes a free Turkish language course.", link: "https://turkiyeburslari.gov.tr", difficulty: "Competitive", docs: ["Valid Passport / ID Copy", "Recent Passport-Sized Photo", "Academic Transcripts", "Diplomas / Graduation Certificates", "Statement of Purpose", "Recommendation Letter x2"] },
+  { id: 2, name: "Stipendium Hungaricum", country: "Hungary", flag: "🇭🇺", region: "Europe", levels: ["Bachelor's", "Master's", "PhD"], ielts: false, funded: true, amount: "Full tuition + monthly allowance + accommodation", deadline: "2026-01-15", fields: ["All Fields"], description: "Hungary's flagship scholarship. No separate IELTS required — proof of language proficiency accepted. Apply through your home country's Tempus Public Foundation office. Documents must be in English or Hungarian.", link: "https://stipendiumhungaricum.hu", difficulty: "Moderate", docs: ["Completed Online Application Form", "Motivation Letter", "Proof of Language Proficiency", "Academic Transcripts", "Graduation Certificates", "Medical Certificate", "Passport Copy"] },
+  { id: 3, name: "Chinese Government Scholarship (CSC)", country: "China", flag: "🇨🇳", region: "Asia", levels: ["Bachelor's", "Master's", "PhD"], ielts: false, funded: true, amount: "Full tuition + free accommodation + monthly stipend (2,500–3,500 CNY)", deadline: "2026-03-15", fields: ["All Fields"], description: "China's largest scholarship with thousands of seats. Deadlines range Dec 2025–April 2026 depending on track. Apply via CSC system or nearest Chinese embassy. Early application strongly recommended.", link: "https://www.campuschina.org", difficulty: "Moderate", docs: ["Notarized Highest Diploma", "Academic Transcripts", "Detailed Study Plan (800+ words for postgrad)", "Recommendation Letter x2 (postgrad)", "Foreigner Physical Examination Form", "Non-Criminal Record Report", "Valid Passport Copy", "English / Chinese Proficiency Proof", "Pre-Admission Letter (if applicable)"] },
+  { id: 4, name: "Romanian Government Scholarship", country: "Romania", flag: "🇷🇴", region: "Europe", levels: ["Bachelor's", "Master's", "PhD"], ielts: false, funded: true, amount: "Full tuition + accommodation + monthly stipend (65 EUR)", deadline: "2026-03-31", fields: ["All Fields"], description: "Fully funded in Eastern Europe. No IELTS or TOEFL required. All documents must be authorized translations in Romanian, English, French, or Spanish. Submit via the Study in Romania portal.", link: "https://scholarships.studyinromania.gov.ro", difficulty: "Moderate", docs: ["Academic Transcripts", "Diplomas / Baccalaureate Certificate", "Birth Certificate", "Passport (first 3 pages)", "CV"] },
+  { id: 5, name: "Russian Government Scholarship", country: "Russia", flag: "🇷🇺", region: "Europe", levels: ["Bachelor's", "Master's", "PhD"], ielts: false, funded: true, amount: "Full tuition + dormitory + monthly stipend", deadline: "2026-01-15", fields: ["Engineering", "Medicine", "Sciences", "Arts"], description: "Large annual quota for developing countries. Register on the official Education in Russia portal. All documents must be notarized and translated into Russian. Apply early — January 15 deadline.", link: "https://education-in-russia.com", difficulty: "Low-Moderate", docs: ["Valid Passport (18+ months validity beyond arrival)", "Academic Certificates / Transcripts (HSSC / Bachelor's)", "Medical Health Certificate", "HIV-Negative Certificate", "Completed Application Form", "Notarized Russian-Translated Document Portfolio"] },
+  { id: 19, name: "Open Doors Russian Scholarship", country: "Russia", flag: "🇷🇺", region: "Europe", levels: ["Master's", "PhD"], ielts: false, funded: true, amount: "Full tuition + dormitory + monthly stipend", deadline: "2026-11-16", fields: ["Engineering", "Medicine", "Sciences", "Arts", "Humanities"], description: "Russia's Open Doors international scholarship. Application period: September 1 – November 16 annually. All documents uploaded online in English or Russian. Supporting documents like certificates and awards are highly recommended.", link: "https://od.globaluni.ru", difficulty: "Low-Moderate", docs: ["Completed Online Application", "Valid Passport / ID Copy", "Academic Transcripts", "Degree Certificates", "Motivation Letter", "CV", "Supporting Certificates / Awards (recommended)"] },
+  { id: 6, name: "Azerbaijan Government Scholarship", country: "Azerbaijan", flag: "🇦🇿", region: "Asia", levels: ["Bachelor's", "Master's", "PhD"], ielts: false, funded: true, amount: "Tuition + accommodation + monthly stipend", deadline: "2026-04-15", fields: ["All Fields"], description: "Full funding in Azerbaijan. Minimum 70% GPA required. Documents in English, Russian, or Turkish. No IELTS needed if your previous education was in English — submit an MOI certificate instead.", link: "https://studyinazerbaijan.edu.az", difficulty: "Low-Moderate", docs: ["Completed Nomination Form", "Certified Academic Diplomas / Transcripts (min 70% GPA)", "Valid Passport Copy", "Medical Certificate (incl. HIV, Hepatitis B/C)", "CV / Résumé", "Motivation Letter", "MOI Certificate (if prev. education in English) OR IELTS / TOEFL"] },
+  { id: 7, name: "Malaysian International Scholarship (MIS)", country: "Malaysia", flag: "🇲🇾", region: "Asia", levels: ["Master's", "PhD"], ielts: false, funded: true, amount: "Full tuition + monthly allowance (RM 1,500–2,000) + return airfare", deadline: "2026-04-03", fields: ["STEM", "Economics", "Social Sciences"], description: "Malaysia's flagship postgraduate scholarship. Application period: 4 March – 3 April 2026. No IELTS needed if your previous degree was taught in English — submit MOI certificate. Apply via KPT MIS Online Application System.", link: "https://biasiswa.mohe.gov.my/INTER/index.php", difficulty: "Moderate", docs: ["Certified Passport Copy (6+ months validity)", "Academic Transcripts", "MOI Certificate (if prev. degree in English) OR IELTS / TOEFL", "Recommendation Letter x2", "CV", "Research Proposal (for research-based programs)", "Admission Letter from Malaysian University"] },
+  { id: 8, name: "Indonesian KNB Scholarship", country: "Indonesia", flag: "🇮🇩", region: "Asia", levels: ["Master's", "PhD"], ielts: false, funded: true, amount: "Full tuition + monthly living allowance", deadline: "2026-03-31", fields: ["All Fields"], description: "Indonesian government scholarship. No IELTS needed if previous education was in English — submit MOI certificate. Unique requirement: record a 5-minute motivation video in English or Bahasa Indonesia, upload to YouTube, and submit the link.", link: "https://knb.kemdiktisaintek.go.id", difficulty: "Low-Moderate", docs: ["Recommendation Letter from Indonesian Embassy", "Valid Passport Copy (or Birth Certificate)", "Academic Certificates / Transcripts (in English)", "MOI Certificate (if prev. education in English) OR TOEFL / IELTS", "CV", "Medical Report", "5-Minute Motivation Video (uploaded to YouTube — link required)", "Recommendation from Employer / Supervisor", "Statement of Purpose (PhD)", "Potential Supervisor's Letter (PhD)"] },
+  { id: 9, name: "Korean Government Scholarship (KGSP)", country: "South Korea", flag: "🇰🇷", region: "Asia", levels: ["Bachelor's", "Master's", "PhD"], ielts: false, funded: true, amount: "Full tuition + monthly stipend (900,000 KRW) + Korean language training + airfare", deadline: "2026-03-31", fields: ["All Fields"], description: "NIIED's flagship program. Undergrad: Sep 15–30 2025. Graduate: Feb 12 – late March 2026. Includes free 1-year Korean language course. Transcripts and graduation certificates must be apostilled or consular confirmed.", link: "https://www.studyinkorea.go.kr", difficulty: "Competitive", docs: ["Completed GKS Application Form", "Personal Statement", "Study Plan", "Research Proposal (graduate)", "Recommendation Letter x2", "Personal Medical Assessment Form", "Proof of Citizenship (applicant + parents)", "Apostilled Academic Transcripts", "Apostilled Graduation Certificates"] },
+  { id: 10, name: "Japanese MEXT Scholarship", country: "Japan", flag: "🇯🇵", region: "Asia", levels: ["Bachelor's", "Master's", "PhD"], ielts: false, funded: true, amount: "Full tuition + monthly stipend (117,000–145,000 JPY) + airfare", deadline: "2026-06-01", fields: ["All Fields"], description: "Japan's Ministry of Education flagship scholarship. Embassy recommendation track: contact Japanese Embassy in Islamabad by April–June 2026 for next cycle. University recommendation: contact target universities directly. All documents A4 size, in English or Japanese.", link: "https://www.studyinjapan.go.jp/en/smap_stopj-applications_research.html", difficulty: "Very Competitive", docs: ["Completed MEXT Application Form", "Research Plan / Study Plan", "Academic Transcripts", "Graduation Certificates", "Recommendation Letter x2", "Medical Certificate", "Passport Copy"] },
+  { id: 11, name: "Saudi Arabia Scholarship (MoHE)", country: "Saudi Arabia", flag: "🇸🇦", region: "Middle East", levels: ["Bachelor's", "Master's", "PhD"], ielts: false, funded: true, amount: "Full tuition + accommodation + monthly stipend + medical insurance + airfare", deadline: "2026-10-31", fields: ["All Fields"], description: "Study at Saudi Arabia's top universities. Next cycle (2026–27) expected: June 2026 for undergrad, October 2026 for postgrad. Apply via the Saudi Cultural Bureau. All academic docs translated to Arabic.", link: "https://studyinsaudi.moe.gov.sa", difficulty: "Moderate", docs: ["Valid Passport Copy", "Academic Transcripts / Certificates (translated to Arabic)", "Recent Medical Report (under 6 months)", "Police Character Certificate", "CV", "Recommendation Letter x2", "NOC from Government (if applicable)"] },
+  { id: 12, name: "Qatar University Scholarship", country: "Qatar", flag: "🇶🇦", region: "Middle East", levels: ["Master's", "PhD"], ielts: false, funded: true, amount: "Full tuition + accommodation + textbooks + round-trip airfare", deadline: "2026-02-25", fields: ["Engineering", "Business", "Sciences", "Humanities"], description: "Qatar University fully funded scholarship for Fall 2026 postgraduate programs (Master's, PhD, PharmD). Deadline: February 25, 2026. Apply directly via QU scholarships portal.", link: "https://www.qu.edu.qa/en-us/students/admission/scholarships", difficulty: "Moderate", docs: ["Final Official Academic Transcripts", "Completed QU Application Form", "Valid Passport Copy", "Passport-Sized Photos", "Recommendation Letters", "CV", "English Proficiency Proof (program-dependent)"] },
+  { id: 13, name: "Brunei Darussalam Government Scholarship (BDGS)", country: "Brunei", flag: "🇧🇳", region: "Asia", levels: ["Bachelor's", "Master's", "PhD"], ielts: false, funded: true, amount: "Full tuition + accommodation + monthly allowance + return airfare + medical", deadline: "2026-02-15", fields: ["All Fields"], description: "Brunei's flagship government scholarship. English-medium country, no IELTS, very low competition. Deadline: February 15, 2026. Apply via Ministry of Foreign Affairs Brunei online portal.", link: "https://www.mfa.gov.bn/pages/scholarship.aspx", difficulty: "Low", docs: ["Completed Online Application Form", "Certified Academic Transcripts / Certificates", "Birth Certificate", "Passport Copy", "Passport-Sized Photos"] },
+  { id: 14, name: "Taiwan ICDF Scholarship", country: "Taiwan", flag: "🇹🇼", region: "Asia", levels: ["Master's", "PhD"], ielts: false, funded: true, amount: "Full tuition + accommodation + monthly stipend (NT$18,000–20,000) + airfare + insurance", deadline: "2026-03-15", fields: ["Agriculture", "Public Health", "Engineering", "Business"], description: "Taiwan's official development scholarship. ~25% acceptance rate. Must possess a bachelor's degree and meet university admission requirements. No IELTS required. Apply via Taiwan ICDF portal.", link: "https://www.icdf.org.tw/wSite/np?ctNode=31561&mp=2", difficulty: "Moderate", docs: ["Bachelor's Degree Certificate", "Academic Transcripts", "Study Plan", "Passport Copy", "Recommendation Letter x2", "Medical Certificate"] },
+  { id: 15, name: "Belarus Government Scholarship", country: "Belarus", flag: "🇧🇾", region: "Europe", levels: ["Bachelor's", "Master's", "PhD"], ielts: false, funded: true, amount: "Full tuition + dormitory", deadline: "2026-09-01", fields: ["Engineering", "Medicine", "Sciences"], description: "Full tuition waiver in Belarus. Applications typically open early summer for September intake. Begin process by June 2026. All documents must be translated into Russian or Belarusian. Apply via Belarusian embassy.", link: "https://studyinby.com", difficulty: "Low", docs: ["Completed Application Form", "Legalized / Notarized Academic Transcripts", "Birth Certificate", "Medical Certificate (incl. HIV/AIDS test)", "Valid Passport (18+ months validity)", "Passport-Sized Photos", "Motivation Letter"] },
+  { id: 16, name: "Serbia 'World in Serbia' Scholarship", country: "Serbia", flag: "🇷🇸", region: "Europe", levels: ["Bachelor's", "Master's", "PhD"], ielts: false, funded: true, amount: "Free tuition + accommodation + meals + monthly stipend (18,000 RSD) + health insurance", deadline: "2026-05-25", fields: ["All Fields"], description: "Serbia's government scholarship for Non-Aligned Movement countries — India and Pakistan are both eligible. Includes Serbian language prep course. Submit to Serbian diplomatic mission.", link: "https://welcometoserbia.gov.rs/scholarships", difficulty: "Low", docs: ["Completed Application Form", "CV", "Passport Copy", "Academic Transcripts / Diplomas", "Proof of Serbian or English Proficiency", "Medical Certificate (not older than 6 months)"] },
+  { id: 17, name: "Morocco Government Scholarship (AMCI)", country: "Morocco", flag: "🇲🇦", region: "Africa", levels: ["Bachelor's", "Master's", "PhD"], ielts: false, funded: true, amount: "Tuition + accommodation + monthly stipend", deadline: "2026-06-12", fields: ["Engineering", "Medicine", "Agriculture"], description: "Moroccan Agency for International Cooperation scholarship. Application period: April–June 2026. Pakistani applicants apply via HEC Pakistan. All application documents typically in French.", link: "https://www.amci.ma", difficulty: "Low-Moderate", docs: ["Completed AMCI Application Form (in French)", "HEC Pakistan Application Form (printed)", "Academic Transcripts / Certificates (attested)", "Birth Certificate / National ID Copy", "Passport Bio-data Page", "Medical Certificate (under 3 months)", "Police Clearance Certificate (under 6 months)", "Motivation Letter", "Recommendation Letter x2", "Passport-Sized Photos (2–6)", "PhD Dissertation + Thesis Project (PhD only)", "NOC from Employer (if employed)"] },
+  { id: 18, name: "Kyrgyzstan Government Scholarship", country: "Kyrgyzstan", flag: "🇰🇬", region: "Asia", levels: ["Bachelor's", "Master's"], ielts: false, funded: true, amount: "Tuition + dormitory", deadline: "2026-06-01", fields: ["Medicine", "Engineering", "Law"], description: "Accessible Central Asian scholarship. Deadlines vary — verify on official Ministry of Education website. Russian-medium programs available. Proficiency test may be administered by the university directly.", link: "https://edu.gov.kg", difficulty: "Low", docs: ["Completed Application Form", "Academic Transcripts (translated to Russian or Kyrgyz)", "Medical Certificate with Lab Reports", "Valid Passport Copy", "CV", "English or Russian Proficiency Test Scores", "Motivation Letter", "Research Proposal (PhD only)"] },
 ];
 
 const STATUS_CONFIG = {
@@ -453,23 +191,12 @@ const STATUS_CONFIG = {
   accepted:      { label: "Accepted 🎉",  color: "#00d278", bg: "rgba(0,210,120,0.15)" },
   rejected:      { label: "Rejected",     color: "#f87171", bg: "rgba(248,113,113,0.12)" },
 };
-
 const REGIONS = ["All", "Asia", "Europe", "Middle East", "Africa"];
 const LEVELS  = ["All", "Bachelor's", "Master's", "PhD"];
-
-function getDaysLeft(d) {
-  return Math.ceil((new Date(d) - new Date()) / 86400000);
-}
+function getDaysLeft(d) { return Math.ceil((new Date(d) - new Date()) / 86400000); }
 
 function Badge({ text, accent }) {
-  const palette = {
-    green:  { bg: "rgba(0,210,120,0.12)",  color: "#00d278" },
-    amber:  { bg: "rgba(251,191,36,0.12)", color: "#fbbf24" },
-    blue:   { bg: "rgba(96,165,250,0.12)", color: "#60a5fa" },
-    red:    { bg: "rgba(248,113,113,0.12)",color: "#f87171" },
-    orange: { bg: "rgba(251,146,60,0.12)", color: "#fb923c" },
-    gray:   { bg: "rgba(148,163,184,0.08)",color: "#94a3b8" },
-  };
+  const palette = { green: { bg: "rgba(0,210,120,0.12)", color: "#00d278" }, amber: { bg: "rgba(251,191,36,0.12)", color: "#fbbf24" }, blue: { bg: "rgba(96,165,250,0.12)", color: "#60a5fa" }, red: { bg: "rgba(248,113,113,0.12)", color: "#f87171" }, orange: { bg: "rgba(251,146,60,0.12)", color: "#fb923c" }, gray: { bg: "rgba(148,163,184,0.08)", color: "#94a3b8" } };
   const c = palette[accent] || palette.gray;
   return <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", padding: "3px 9px", borderRadius: 20, background: c.bg, color: c.color, whiteSpace: "nowrap" }}>{text}</span>;
 }
@@ -490,18 +217,11 @@ function DocBar({ docs, completed }) {
 }
 
 function ScholarshipCard({ s, tracking, onOpen }) {
-  const days = getDaysLeft(s.deadline);
-  const urgent = days <= 45 && days > 0;
+  const days = getDaysLeft(s.deadline), urgent = days <= 45 && days > 0;
   const isTracking = tracking?.status && tracking.status !== "none";
   const status = STATUS_CONFIG[tracking?.status || "none"];
   return (
-    <div onClick={() => onOpen(s)} style={{
-      background: "linear-gradient(145deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))",
-      border: urgent ? "1px solid rgba(251,191,36,0.3)" : isTracking ? "1px solid rgba(59,130,246,0.25)" : "1px solid rgba(255,255,255,0.07)",
-      borderRadius: 16, padding: "20px 22px", cursor: "pointer",
-      transition: "transform 0.2s,box-shadow 0.2s", position: "relative",
-      display: "flex", flexDirection: "column", gap: 12,
-    }}
+    <div onClick={() => onOpen(s)} style={{ background: "linear-gradient(145deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))", border: urgent ? "1px solid rgba(251,191,36,0.3)" : isTracking ? "1px solid rgba(59,130,246,0.25)" : "1px solid rgba(255,255,255,0.07)", borderRadius: 16, padding: "20px 22px", cursor: "pointer", transition: "transform 0.2s,box-shadow 0.2s", position: "relative", display: "flex", flexDirection: "column", gap: 12 }}
       onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 12px 40px rgba(0,0,0,0.35)"; }}
       onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = ""; }}
     >
@@ -536,7 +256,7 @@ function ScholarshipCard({ s, tracking, onOpen }) {
 }
 
 function DetailModal({ s, tracking, onClose, onUpdateTracking }) {
-  const [tab, setTab]             = useState("info");
+  const [tab, setTab] = useState("info");
   const [localStatus, setLocalStatus] = useState(tracking?.status || "none");
   const [localNotes,  setLocalNotes]  = useState(tracking?.notes   || "");
   const [localDocs,   setLocalDocs]   = useState(tracking?.completedDocs || []);
@@ -544,10 +264,9 @@ function DetailModal({ s, tracking, onClose, onUpdateTracking }) {
   const days = getDaysLeft(s.deadline);
   const toggleDoc = doc => setLocalDocs(prev => prev.includes(doc) ? prev.filter(x => x !== doc) : [...prev, doc]);
   const save = () => { onUpdateTracking(s.id, { status: localStatus, completedDocs: localDocs, notes: localNotes }); };
-
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", backdropFilter: "blur(10px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 16 }} onClick={onClose}>
-      <div style={{ background: "#0a1525", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 20, width: "100%", maxWidth: 560, maxHeight: "92vh", overflowY: "auto", position: "relative" }} onClick={e => e.stopPropagation()}>
+      <div style={{ background: "#07111d", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 20, width: "100%", maxWidth: 560, maxHeight: "92vh", overflowY: "auto", position: "relative" }} onClick={e => e.stopPropagation()}>
         <div style={{ padding: "24px 26px 0", borderBottom: "1px solid rgba(255,255,255,0.07)", paddingBottom: 16 }}>
           <button onClick={onClose} style={{ position: "absolute", top: 14, right: 14, background: "rgba(255,255,255,0.07)", border: "none", color: "#94a3b8", width: 30, height: 30, borderRadius: "50%", cursor: "pointer", fontSize: 13 }}>✕</button>
           <div style={{ display: "flex", gap: 14, alignItems: "center", marginBottom: 16 }}>
@@ -618,7 +337,7 @@ function DetailModal({ s, tracking, onClose, onUpdateTracking }) {
                   {s.docs.map(doc => (
                     <div key={doc} onClick={() => toggleDoc(doc)} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
                       <div style={{ width: 18, height: 18, borderRadius: 5, flexShrink: 0, background: localDocs.includes(doc) ? "#00d278" : "transparent", border: localDocs.includes(doc) ? "none" : "1px solid rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        {localDocs.includes(doc) && <span style={{ fontSize: 10, color: "#0a1525", fontWeight: 900 }}>✓</span>}
+                        {localDocs.includes(doc) && <span style={{ fontSize: 10, color: "#07111d", fontWeight: 900 }}>✓</span>}
                       </div>
                       <span style={{ fontSize: 13, color: localDocs.includes(doc) ? "#475569" : "#c8d4e0", textDecoration: localDocs.includes(doc) ? "line-through" : "none" }}>{doc}</span>
                     </div>
@@ -640,13 +359,8 @@ function DetailModal({ s, tracking, onClose, onUpdateTracking }) {
 
 function TrackerView({ scholarships, trackingData, onOpen }) {
   const tracked = scholarships.filter(s => trackingData[s.id]?.status && trackingData[s.id].status !== "none");
-  const counts = {
-    researching: tracked.filter(s => trackingData[s.id].status === "researching").length,
-    inProgress:  tracked.filter(s => trackingData[s.id].status === "in-progress").length,
-    applied:     tracked.filter(s => trackingData[s.id].status === "applied").length,
-    accepted:    tracked.filter(s => trackingData[s.id].status === "accepted").length,
-  };
-  if (tracked.length === 0) return (
+  const counts = { researching: tracked.filter(s => trackingData[s.id].status === "researching").length, inProgress: tracked.filter(s => trackingData[s.id].status === "in-progress").length, applied: tracked.filter(s => trackingData[s.id].status === "applied").length, accepted: tracked.filter(s => trackingData[s.id].status === "accepted").length };
+  if (!tracked.length) return (
     <div style={{ textAlign: "center", padding: "70px 20px" }}>
       <div style={{ fontSize: 52, marginBottom: 16 }}>📊</div>
       <div style={{ color: "#475569", fontSize: 15, marginBottom: 8 }}>No scholarships tracked yet.</div>
@@ -664,9 +378,7 @@ function TrackerView({ scholarships, trackingData, onOpen }) {
         ))}
       </div>
       {tracked.map(s => {
-        const t = trackingData[s.id];
-        const st = STATUS_CONFIG[t.status];
-        const days = getDaysLeft(s.deadline);
+        const t = trackingData[s.id], st = STATUS_CONFIG[t.status], days = getDaysLeft(s.deadline);
         const pct = s.docs.length ? Math.round((t.completedDocs.length / s.docs.length) * 100) : 0;
         return (
           <div key={s.id} onClick={() => onOpen(s)} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "16px 20px", cursor: "pointer", marginBottom: 10, transition: "background 0.15s" }}
@@ -698,6 +410,80 @@ function TrackerView({ scholarships, trackingData, onOpen }) {
   );
 }
 
+// Navigation Menu Component
+function NavMenu({ onNavigate, currentTab }) {
+  const [open, setOpen] = useState(false);
+  const items = [
+    { icon: "🏠", label: "Home", tab: "browse" },
+    { icon: "🔍", label: "Browse Scholarships", tab: "browse" },
+    { icon: "⏱", label: "Timeline", tab: "timeline" },
+    { icon: "📊", label: "My Tracker", tab: "tracker" },
+    { icon: "ℹ️", label: "About FundedOut", tab: "about" },
+  ];
+  return (
+    <div style={{ position: "relative" }}>
+      <button onClick={() => setOpen(v => !v)} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#f1f5f9", width: 38, height: 38, borderRadius: 10, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, padding: 0 }}>
+        {[0,1,2].map(i => <div key={i} style={{ width: 16, height: 1.5, background: "#94a3b8", borderRadius: 2 }} />)}
+      </button>
+      {open && (
+        <>
+          <div style={{ position: "fixed", inset: 0, zIndex: 99 }} onClick={() => setOpen(false)} />
+          <div style={{ position: "absolute", top: 46, right: 0, background: "#0a1525", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 14, padding: "8px", minWidth: 220, zIndex: 100, boxShadow: "0 20px 60px rgba(0,0,0,0.5)" }}>
+            <div style={{ fontSize: 10, color: "#334155", letterSpacing: "0.1em", padding: "6px 12px 8px", fontWeight: 700 }}>NAVIGATION</div>
+            {items.map(item => (
+              <button key={item.label} onClick={() => { onNavigate(item.tab); setOpen(false); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10, border: "none", background: currentTab === item.tab && item.tab !== "about" ? "rgba(59,130,246,0.15)" : "transparent", color: currentTab === item.tab && item.tab !== "about" ? "#60a5fa" : "#94a3b8", cursor: "pointer", fontSize: 13, fontWeight: 500, fontFamily: "'Outfit',sans-serif", textAlign: "left", transition: "background 0.15s" }}
+                onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.06)"}
+                onMouseLeave={e => e.currentTarget.style.background = currentTab === item.tab && item.tab !== "about" ? "rgba(59,130,246,0.15)" : "transparent"}
+              >
+                <span style={{ fontSize: 16 }}>{item.icon}</span> {item.label}
+              </button>
+            ))}
+            <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", margin: "8px 0" }} />
+            <div style={{ padding: "6px 12px" }}>
+              <div style={{ fontSize: 10, color: "#334155", letterSpacing: "0.08em", marginBottom: 6, fontWeight: 700 }}>SHARE APP</div>
+              <button onClick={() => { navigator.clipboard?.writeText("https://fundedout-app.vercel.app"); setOpen(false); }} style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)", color: "#64748b", cursor: "pointer", fontSize: 12, fontFamily: "'Outfit',sans-serif" }}>
+                📋 Copy App Link
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function AboutView() {
+  return (
+    <div style={{ maxWidth: 600, margin: "0 auto", padding: "20px 0" }}>
+      <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16, padding: "28px 28px", marginBottom: 16 }}>
+        <h2 style={{ fontSize: 22, fontWeight: 800, color: "#f1f5f9", fontFamily: "'Syne',sans-serif", marginBottom: 10 }}>About FundedOut</h2>
+        <p style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.8, marginBottom: 16 }}>FundedOut is a free scholarship discovery and tracking app. Every scholarship listed is verified, fully funded, and carefully researched.</p>
+        <p style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.8 }}>Our mission is simple — remove the barriers between talented students and world-class education. No IELTS? No problem. No money? No problem. Just your ambition and the right information.</p>
+      </div>
+      <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16, padding: "24px 28px", marginBottom: 16 }}>
+        <div style={{ fontSize: 10, color: "#475569", letterSpacing: "0.08em", marginBottom: 14 }}>WHAT'S INSIDE</div>
+        {[
+          { icon: "🎓", text: "Fully funded, verified scholarships worldwide" },
+          { icon: "✅", text: "Exact documents required for each scholarship" },
+          { icon: "📊", text: "Application readiness radar chart" },
+          { icon: "⏱", text: "Visual deadline timeline" },
+          { icon: "📋", text: "Personal tracker with notes" },
+          { icon: "💾", text: "Data saved locally on your device" },
+        ].map(item => (
+          <div key={item.text} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+            <span style={{ fontSize: 16 }}>{item.icon}</span>
+            <span style={{ fontSize: 13, color: "#94a3b8" }}>{item.text}</span>
+          </div>
+        ))}
+      </div>
+      <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16, padding: "24px 28px" }}>
+        <div style={{ fontSize: 10, color: "#475569", letterSpacing: "0.08em", marginBottom: 14 }}>IMPORTANT NOTICE</div>
+        <p style={{ fontSize: 12, color: "#64748b", lineHeight: 1.8 }}>Deadlines shown are based on historical patterns and verified research. Always confirm the official deadline on each scholarship's website before applying. FundedOut is not affiliated with any scholarship program.</p>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [tab,          setTab]          = useState("browse");
   const [search,       setSearch]       = useState("");
@@ -707,14 +493,7 @@ export default function App() {
   const [selected,     setSelected]     = useState(null);
   const [trackingData, setTrackingData] = useState(() => loadFromStorage());
 
-  const updateTracking = (id, data) => {
-    setTrackingData(prev => {
-      const updated = { ...prev, [id]: data };
-      saveToStorage(updated);
-      return updated;
-    });
-  };
-
+  const updateTracking = (id, data) => { setTrackingData(prev => { const updated = { ...prev, [id]: data }; saveToStorage(updated); return updated; }); };
   const trackedCount = Object.values(trackingData).filter(t => t.status && t.status !== "none").length;
   const upcoming     = SCHOLARSHIPS.filter(s => { const d = getDaysLeft(s.deadline); return d > 0 && d <= 45; }).length;
   const noIeltsCount = SCHOLARSHIPS.filter(s => s.ielts === false).length;
@@ -744,41 +523,37 @@ export default function App() {
         input:focus,select:focus,textarea:focus{outline:none}
       `}</style>
 
+      {/* Top Navigation Bar */}
+      <div style={{ position: "sticky", top: 0, zIndex: 50, background: "rgba(7,17,29,0.95)", backdropFilter: "blur(12px)", borderBottom: "1px solid rgba(255,255,255,0.06)", padding: "12px 20px" }}>
+        <div style={{ maxWidth: 960, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#00d278", boxShadow: "0 0 6px #00d278" }} />
+            <span style={{ fontSize: 18, fontWeight: 800, fontFamily: "'Syne',sans-serif", background: "linear-gradient(135deg,#3b82f6,#818cf8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>FundedOut</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            {trackedCount > 0 && <span style={{ fontSize: 11, color: "#fbbf24", background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.2)", padding: "3px 10px", borderRadius: 20, fontWeight: 600 }}>{trackedCount} tracking</span>}
+            <NavMenu onNavigate={setTab} currentTab={tab} />
+          </div>
+        </div>
+      </div>
+
+      {/* Hero */}
       <div style={{ background: "linear-gradient(180deg,rgba(59,130,246,0.07) 0%,transparent 100%)", borderBottom: "1px solid rgba(255,255,255,0.06)", padding: "36px 20px 28px" }}>
         <div style={{ maxWidth: 960, margin: "0 auto" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-            <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#00d278", boxShadow: "0 0 8px #00d278" }} />
-            <span style={{ fontSize: 10, color: "#00d278", fontWeight: 700, letterSpacing: "0.15em" }}>VERIFIED DEADLINES · VERIFIED DOCUMENTS · SOUTH ASIA</span>
-          </div>
-          <h1 style={{ fontSize: "clamp(32px,6vw,52px)", fontWeight: 800, lineHeight: 1.05, fontFamily: "'Syne',sans-serif", marginBottom: 10 }}>
-            <span style={{ background: "linear-gradient(135deg,#3b82f6,#818cf8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>FundedOut</span>
+          <h1 style={{ fontSize: "clamp(26px,5vw,46px)", fontWeight: 800, lineHeight: 1.1, fontFamily: "'Syne',sans-serif", marginBottom: 10 }}>
+            Your passport out<br />
+            <span style={{ background: "linear-gradient(135deg,#3b82f6,#818cf8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>starts here.</span>
           </h1>
-          <p style={{ fontSize: 16, color: "#94a3b8", fontStyle: "italic", marginBottom: 10, fontFamily: "'Syne',sans-serif", fontWeight: 700 }}>
-            Your passport out starts here.
-          </p>
-          <p style={{ fontSize: 13, color: "#64748b", maxWidth: 480, lineHeight: 1.7 }}>
+          <p style={{ fontSize: 13, color: "#64748b", maxWidth: 460, lineHeight: 1.7, marginBottom: 18 }}>
             {SCHOLARSHIPS.length} verified, fully funded scholarships — real deadlines, exact documents, zero guesswork.
           </p>
 
-          <button onClick={() => setNoIelts(v => !v)} style={{
-            marginTop: 18, padding: "10px 20px", borderRadius: 50, cursor: "pointer", fontSize: 13, fontWeight: 700, fontFamily: "'Outfit',sans-serif",
-            background: noIelts ? "linear-gradient(135deg,rgba(0,210,120,0.2),rgba(0,210,120,0.1))" : "rgba(255,255,255,0.05)",
-            border: noIelts ? "1px solid rgba(0,210,120,0.5)" : "1px solid rgba(255,255,255,0.1)",
-            color: noIelts ? "#00d278" : "#64748b",
-            boxShadow: noIelts ? "0 0 20px rgba(0,210,120,0.15)" : "none",
-            transition: "all 0.2s",
-          }}>
+          <button onClick={() => setNoIelts(v => !v)} style={{ padding: "10px 20px", borderRadius: 50, cursor: "pointer", fontSize: 13, fontWeight: 700, fontFamily: "'Outfit',sans-serif", background: noIelts ? "linear-gradient(135deg,rgba(0,210,120,0.2),rgba(0,210,120,0.1))" : "rgba(255,255,255,0.05)", border: noIelts ? "1px solid rgba(0,210,120,0.5)" : "1px solid rgba(255,255,255,0.1)", color: noIelts ? "#00d278" : "#64748b", boxShadow: noIelts ? "0 0 20px rgba(0,210,120,0.15)" : "none", transition: "all 0.2s" }}>
             {noIelts ? "✓ " : ""}No IELTS? No Problem — Show Only IELTS-Free ({noIeltsCount})
           </button>
 
           <div style={{ display: "flex", gap: 22, marginTop: 20, flexWrap: "wrap" }}>
-            {[
-              { label: "Scholarships", value: SCHOLARSHIPS.length },
-              { label: "Countries",    value: [...new Set(SCHOLARSHIPS.map(s => s.country))].length },
-              { label: "IELTS-Free",   value: noIeltsCount },
-              { label: "Closing Soon", value: upcoming,     hot: upcoming > 0 },
-              { label: "Tracking",     value: trackedCount, hot: trackedCount > 0 },
-            ].map(stat => (
+            {[{ label: "Scholarships", value: SCHOLARSHIPS.length }, { label: "Countries", value: [...new Set(SCHOLARSHIPS.map(s => s.country))].length }, { label: "IELTS-Free", value: noIeltsCount }, { label: "Closing Soon", value: upcoming, hot: upcoming > 0 }, { label: "Tracking", value: trackedCount, hot: trackedCount > 0 }].map(stat => (
               <div key={stat.label}>
                 <span style={{ fontSize: 22, fontWeight: 800, color: stat.hot ? "#fbbf24" : "#f1f5f9", fontFamily: "'Syne',sans-serif" }}>{stat.value}</span>
                 <span style={{ fontSize: 12, color: "#475569", marginLeft: 6 }}>{stat.label}</span>
@@ -789,11 +564,14 @@ export default function App() {
       </div>
 
       <div style={{ maxWidth: 960, margin: "0 auto", padding: "26px 20px" }}>
-        <div style={{ display: "flex", gap: 4, marginBottom: 24, background: "rgba(255,255,255,0.03)", borderRadius: 12, padding: 4, width: "fit-content" }}>
-          {TABS.map(t => (
-            <button key={t.key} onClick={() => setTab(t.key)} style={{ padding: "8px 20px", borderRadius: 9, border: "none", cursor: "pointer", background: tab === t.key ? "rgba(59,130,246,0.2)" : "transparent", color: tab === t.key ? "#60a5fa" : "#475569", fontSize: 13, fontWeight: 600, fontFamily: "'Outfit',sans-serif", transition: "all 0.15s", whiteSpace: "nowrap" }}>{t.label}</button>
-          ))}
-        </div>
+        {/* Tabs */}
+        {tab !== "about" && (
+          <div style={{ display: "flex", gap: 4, marginBottom: 24, background: "rgba(255,255,255,0.03)", borderRadius: 12, padding: 4, width: "fit-content" }}>
+            {TABS.map(t => (
+              <button key={t.key} onClick={() => setTab(t.key)} style={{ padding: "8px 20px", borderRadius: 9, border: "none", cursor: "pointer", background: tab === t.key ? "rgba(59,130,246,0.2)" : "transparent", color: tab === t.key ? "#60a5fa" : "#475569", fontSize: 13, fontWeight: 600, fontFamily: "'Outfit',sans-serif", transition: "all 0.15s", whiteSpace: "nowrap" }}>{t.label}</button>
+            ))}
+          </div>
+        )}
 
         {tab === "browse" && (
           <>
@@ -801,7 +579,7 @@ export default function App() {
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search country or scholarship…" style={{ flex: 1, minWidth: 160, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "#f1f5f9", padding: "9px 14px", borderRadius: 10, fontSize: 13 }} />
               {[{ value: region, setter: setRegion, opts: REGIONS, label: "Region" }, { value: level, setter: setLevel, opts: LEVELS, label: "Level" }].map(f => (
                 <select key={f.label} value={f.value} onChange={e => f.setter(e.target.value)} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "#f1f5f9", padding: "9px 14px", borderRadius: 10, fontSize: 13, cursor: "pointer" }}>
-                  {f.opts.map(o => <option key={o} value={o} style={{ background: "#0a1525" }}>{o === "All" ? `${f.label}: All` : o}</option>)}
+                  {f.opts.map(o => <option key={o} value={o} style={{ background: "#07111d" }}>{o === "All" ? `${f.label}: All` : o}</option>)}
                 </select>
               ))}
             </div>
@@ -816,13 +594,20 @@ export default function App() {
                 <button onClick={() => { setSearch(""); setRegion("All"); setLevel("All"); setNoIelts(false); }} style={{ background: "none", border: "1px solid rgba(255,255,255,0.1)", color: "#64748b", padding: "7px 16px", borderRadius: 8, cursor: "pointer", fontSize: 13 }}>Clear Filters</button>
               </div>
             )}
+            {filtered.length > 0 && (
+              <div style={{ marginTop: 32, textAlign: "center", padding: "22px", background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.08)", borderRadius: 14 }}>
+                <div style={{ fontSize: 16, marginBottom: 8 }}>🚀</div>
+                <p style={{ fontSize: 13, color: "#475569", lineHeight: 1.7 }}>This is just the beginning.<br />More fully funded opportunities dropping soon.</p>
+              </div>
+            )}
           </>
         )}
 
         {tab === "timeline" && <TimelineView scholarships={SCHOLARSHIPS} trackingData={trackingData} onOpen={setSelected} />}
         {tab === "tracker"  && <TrackerView  scholarships={SCHOLARSHIPS} trackingData={trackingData} onOpen={setSelected} />}
+        {tab === "about"    && <AboutView />}
 
-        <div style={{ marginTop: 48, textAlign: "center", color: "#1a2535", fontSize: 11, letterSpacing: "0.05em" }}>
+        <div style={{ marginTop: 48, textAlign: "center", color: "#0a1525", fontSize: 11, letterSpacing: "0.05em" }}>
           FUNDEDOUT · YOUR PASSPORT OUT STARTS HERE
         </div>
       </div>
