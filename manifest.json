@@ -1,31 +1,28 @@
 {
   "name": "FundedOut",
   "short_name": "FundedOut",
+  "id": "com.fundedout.app",
   "description": "Discover fully funded scholarships worldwide. No IELTS required options available. Track your applications, check deadlines, and prepare your documents - all in one free app.",
-  "start_url": "https://fundedout-app.vercel.app/",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#07111d",
   "theme_color": "#3b82f6",
-  "orientation": "portrait",
+  "lang": "en",
+  "categories": ["education", "productivity"],
   "icons": [
     {
-      "src": "https://fundedout-app.vercel.app/logo.png",
+      "src": "/logo.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "https://fundedout-app.vercel.app/logo.png",
+      "src": "/logo.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
     }
-  ],
-  "scope": "https://fundedout-app.vercel.app/",
-  "lang": "en",
-  "id": "com.fundedout.app",
-  "categories": [
-    "education",
-    "productivity"
   ]
 }
