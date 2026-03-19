@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { Analytics } from "@vercel/analytics/react";
 
 const STORAGE_KEY = "scholarship_tracker_v1";
 function loadFromStorage() {
@@ -682,6 +683,7 @@ export default function App() {
       </div>
 
       <DetailModal key={selected?.id} s={selected} tracking={selected ? trackingData[selected.id] : null} onClose={() => setSelected(null)} onUpdateTracking={(id, data) => { updateTracking(id, data); setSelected(null); }} />
+      <Analytics />
     </div>
   );
 }
